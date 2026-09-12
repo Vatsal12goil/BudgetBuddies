@@ -1,0 +1,303 @@
+/* =========================
+   GLOBAL RESET & FONT
+========================= */
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Inter,sans-serif;
+}
+
+
+/* =========================
+   LOGIN & REGISTER PAGE
+========================= */
+
+body{
+  background:linear-gradient(135deg,#5B4BFF,#8A5CFF);
+  min-height:100vh;
+}
+
+.auth-page{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+
+/* Glass Card (Login/Register Container) */
+.card{
+  width:380px;
+  background:rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:24px;
+  padding:35px;
+  color:#fff;
+}
+
+
+/* Logo & Subtitle */
+.logo{
+  font-size:30px;
+  font-weight:700;
+  margin-bottom:8px;
+}
+
+.subtitle{
+  opacity:.8;
+  margin-bottom:28px;
+}
+
+
+/* Input Fields */
+.input{
+  width:100%;
+  padding:14px;
+  margin:10px 0;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,.15);
+  color:white;
+}
+
+.input::placeholder{
+  color:#eee;
+}
+
+
+/* Primary Button */
+.btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:white;
+  color:#5B4BFF;
+  font-weight:700;
+  cursor:pointer;
+  margin-top:12px;
+}
+
+
+/* Bottom Register/Login Link */
+.link{
+  margin-top:18px;
+  text-align:center;
+}
+
+.link a{
+  color:#fff;
+  font-weight:600;
+  text-decoration:none;
+}
+
+
+
+/* ================= DASHBOARD ONLY ================= */
+
+.dashboard-page{
+  min-height:100vh;
+  padding:32px;
+  background:linear-gradient(135deg,#eef2ff 0%,#f8f5ff 45%,#ffffff 100%);
+}
+
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 26px;
+  border-radius:20px;
+  background:linear-gradient(135deg,#5b4bff,#7c4dff);
+  color:#fff;
+  box-shadow:0 14px 35px rgba(91,75,255,.28);
+}
+
+.navbar h2{margin:0;font-size:26px;}
+.navbar p{margin-top:4px;opacity:.85;font-size:13px;}
+
+.logout-btn{
+  border:none;
+  background:#fff;
+  color:#5b4bff;
+  padding:10px 18px;
+  border-radius:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.25s;
+}
+
+.logout-btn:hover{
+  transform:translateY(-2px);
+}
+
+.welcome-banner{
+  margin:28px 0;
+  background:#fff;
+  border-radius:22px;
+  padding:28px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 10px 25px rgba(0,0,0,.06);
+}
+
+.welcome-banner h1{
+  color:#222;
+  margin-bottom:6px;
+}
+
+.welcome-banner p{
+  color:#777;
+}
+
+.role-badge{
+  background:#ede9fe;
+  color:#5b21b6;
+  padding:10px 18px;
+  border-radius:999px;
+  font-weight:700;
+  text-transform:capitalize;
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+  margin-bottom:28px;
+}
+
+.stat-card{
+  background:#fff;
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 8px 20px rgba(0,0,0,.05);
+  transition:.25s;
+}
+
+.stat-card:hover{
+  transform:translateY(-4px);
+}
+
+.stat-card span{
+  color:#777;
+  font-size:13px;
+}
+
+.stat-card h2{
+  margin-top:10px;
+  color:#5b4bff;
+  font-size:28px;
+}
+
+.table-card{
+  background:#fff;
+  border-radius:20px;
+  padding:24px;
+  box-shadow:0 8px 20px rgba(0,0,0,.05);
+}
+
+.table-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.table-head h3{
+  color:#222;
+}
+
+.table-head span{
+  color:#888;
+  font-size:14px;
+}
+
+.table-card table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.table-card th{
+  text-align:left;
+  color:#666;
+  padding:14px;
+  border-bottom:2px solid #ececec;
+}
+
+.table-card td{
+  padding:16px 14px;
+  border-bottom:1px solid #f3f3f3;
+}
+
+.table-card tbody tr:hover{
+  background:#faf9ff;
+}
+
+@media(max-width:900px){
+  .stats-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .welcome-banner{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:14px;
+  }
+}
+/* ===== TOAST NOTIFICATION ===== */
+
+.toast{
+  position:fixed;
+  top:24px;
+  right:24px;
+  min-width:280px;
+  padding:16px 18px;
+  border-radius:14px;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  box-shadow:0 18px 40px rgba(0,0,0,.18);
+  z-index:999;
+  animation:slideIn .35s ease forwards;
+}
+
+.toast.success{
+  background:linear-gradient(135deg,#16a34a,#22c55e);
+}
+
+.toast.error{
+  background:linear-gradient(135deg,#dc2626,#ef4444);
+}
+
+.toast.info{
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+}
+
+.toast-icon{
+  font-size:22px;
+}
+
+.toast-title{
+  font-weight:700;
+  margin-bottom:2px;
+}
+
+.toast-msg{
+  font-size:13px;
+  opacity:.95;
+}
+
+@keyframes slideIn{
+  from{
+    opacity:0;
+    transform:translateX(100%);
+  }
+  to{
+    opacity:1;
+    transform:translateX(0);
+  }
+}
