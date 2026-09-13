@@ -21,7 +21,12 @@ class UserLogin(BaseModel):
 class ExpenseCreate(BaseModel):
     title: str
     amount: float
+    category: str
 
+class ExpenseUpdate(BaseModel):
+    title: str
+    amount: float
+    category: str
 
 # ---------- INCOME ----------
 
@@ -48,3 +53,17 @@ class IncomeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------- BUDGET ----------
+
+class BudgetCreate(BaseModel):
+    category: str
+    amount: float
+    month: str
+
+
+class BudgetUpdate(BaseModel):
+    category: str
+    amount: float
+    month: str

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .models import User
 
-SECRET_KEY = "budgetbuddy_secret_2026"
+SECRET_KEY = "budgetbuddy_super_secure_secret_key_2026_@123"
 ALGORITHM = "HS256"
 
 security = HTTPBearer()

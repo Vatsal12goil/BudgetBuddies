@@ -16,6 +16,7 @@ class User(Base):
 
     expenses = relationship("Expense", back_populates="user")
     incomes = relationship("Income", back_populates="user")
+    budgets = relationship("Budget", back_populates="user")
 
 
 class Expense(Base):
@@ -24,6 +25,7 @@ class Expense(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
+    category = Column(String, nullable=False)
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="expenses")
@@ -40,3 +42,15 @@ class Income(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="incomes")
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    month = Column(String, nullable=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User", back_populates="budgets")

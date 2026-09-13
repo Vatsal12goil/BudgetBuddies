@@ -4,13 +4,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from .database import Base, engine, SessionLocal
-from .models import User, Expense, Income
+from .models import User, Expense, Income, Budget
 from .schemas import (
     UserRegister,
     UserLogin,
     ExpenseCreate,
+    ExpenseUpdate,
     IncomeCreate,
     IncomeUpdate,
+    BudgetCreate,
+    BudgetUpdate,
 )
 from .auth import (
     hash_password,
@@ -105,9 +108,22 @@ def add_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    valid_categories = [
+        "Food",
+        "Travel",
+        "Shopping",
+        "Education",
+        "Entertainment",
+        "Miscellaneous",
+    ]
+
+    if expense.category not in valid_categories:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
     new_expense = Expense(
         title=expense.title,
         amount=expense.amount,
+        category=expense.category,
         user_id=current_user.id,
     )
 
@@ -115,8 +131,6 @@ def add_expense(
     db.commit()
 
     return {"message": "Expense Added"}
-
-
 # My Expenses
 @app.get("/expenses")
 def my_expenses(
@@ -126,6 +140,45 @@ def my_expenses(
     return db.query(Expense).filter(
         Expense.user_id == current_user.id
     ).all()
+# Update Expense
+@app.put("/expenses/{expense_id}")
+def update_expense(
+    expense_id: int,
+    expense: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    valid_categories = [
+        "Food",
+        "Travel",
+        "Shopping",
+        "Education",
+        "Entertainment",
+        "Miscellaneous",
+    ]
+
+    if expense.category not in valid_categories:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    record = (
+        db.query(Expense)
+        .filter(
+            Expense.id == expense_id,
+            Expense.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    record.title = expense.title
+    record.amount = expense.amount
+    record.category = expense.category
+
+    db.commit()
+
+    return {"message": "Expense Updated"}
 # Add Income
 @app.post("/income")
 def add_income(
@@ -278,3 +331,48 @@ def dashboard_summary(
         "remaining_amount": total_income - total_expense,
         "recent_activity": recent[:5]
     }
+# Create Budget
+@app.post("/budget")
+def create_budget(
+    budget: BudgetCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    valid_categories = [
+        "Food",
+        "Travel",
+        "Shopping",
+        "Education",
+        "Entertainment",
+        "Miscellaneous",
+    ]
+
+    if budget.category not in valid_categories:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    if budget.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid budget amount")
+
+    new_budget = Budget(
+        category=budget.category,
+        amount=budget.amount,
+        month=budget.month,
+        user_id=current_user.id,
+    )
+
+    db.add(new_budget)
+    db.commit()
+
+    return {"message": "Budget Created"}
+
+
+# View Budgets
+@app.get("/budget")
+def get_budgets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Budget)
+        .filter(Budget.user_id == current_user.id)
+        .all()
+    )
