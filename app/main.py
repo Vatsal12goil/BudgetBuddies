@@ -757,6 +757,33 @@ def update_progress(
     record.is_completed = (
         record.current_saved >= record.target_amount
     )
+
+    # ===== Savings Milestone Notification =====
+    progress_percent = (
+        record.current_saved / record.target_amount
+    ) * 100
+
+    if progress_percent >= 50 and not record.is_completed:
+        exists = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.type == "savings_milestone",
+                Notification.related_id == record.id,
+            )
+            .first()
+        )
+
+        if not exists:
+            db.add(
+                Notification(
+                    user_id=current_user.id,
+                    type="savings_milestone",
+                    message=f"🎯 50% milestone reached for: {record.goal_name}",
+                    related_id=record.id,
+                )
+            )
+
     # ===== Savings Notification Trigger =====
     if record.is_completed:
         exists = (
