@@ -126,17 +126,6 @@ export default function Dashboard() {
 
       const analyticsData = analyticsRes.data;
 
-      // Calculate savings from existing goals data
-      const totalSaved = goalData.data.reduce(
-        (sum, goal) => sum + Number(goal.current_saved || 0),
-        0
-      );
-
-      const totalTarget = goalData.data.reduce(
-        (sum, goal) => sum + Number(goal.target_amount || 0),
-        0
-      );
-
       // Convert backend response into the structure
       // expected by the Analytics Dashboard
       setAnalytics({
@@ -144,8 +133,8 @@ export default function Dashboard() {
         total_expense: analyticsData.summary?.expense || 0,
         remaining_budget: analyticsData.summary?.balance || 0,
 
-        total_saved: totalSaved,
-        total_target: totalTarget,
+        total_saved: Number(analyticsData.savings?.total_saved || 0),
+        total_target: Number(analyticsData.savings?.total_target || 0),
 
         category_summary: (analyticsData.category_summary || []).map(
           (item) => ({
