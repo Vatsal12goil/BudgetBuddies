@@ -16,6 +16,9 @@ class User(Base):
     monthly_income = Column(Float, nullable=True)
     financial_preference = Column(String, nullable=True)
     account_setting = Column(String, nullable=True)
+    monthly_income = Column(Float, nullable=True)
+    financial_preference = Column(String, nullable=True)
+    account_setting = Column(String, nullable=True)
 
     expenses = relationship("Expense", back_populates="user")
     incomes = relationship("Income", back_populates="user")
