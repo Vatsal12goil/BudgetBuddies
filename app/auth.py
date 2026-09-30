@@ -9,9 +9,19 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .models import User
 
-SECRET_KEY = "budgetbuddy_super_secure_secret_key_2026_@123"
-ALGORITHM = "HS256"
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not configured")
+
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+)
 security = HTTPBearer()
 
 
@@ -27,7 +37,9 @@ def create_access_token(user):
     payload = {
         "sub": str(user.id),
         "role": user.role,
-        "exp": datetime.utcnow() + timedelta(hours=1)
+        "exp": datetime.utcnow() + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+)
     }
 
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

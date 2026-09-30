@@ -181,7 +181,7 @@ useEffect(() => {
   loadData();
 }, []);
 const downloadPDF = async () => {
-  const res = await fetch("http://127.0.0.1:8000/report/pdf", {
+  const res = await fetch(`${api.defaults.baseURL}/report/pdf`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -199,7 +199,7 @@ const downloadPDF = async () => {
 };
 
 const downloadExcel = async () => {
-  const res = await fetch("http://127.0.0.1:8000/report/excel", {
+  const res = await fetch(`${api.defaults.baseURL}/report/excel`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

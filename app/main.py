@@ -9,6 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from openpyxl import Workbook
 import os
+from dotenv import load_dotenv
 from app.models import Notification
 from app.schemas import NotificationOut
 from .schemas import (
@@ -35,16 +36,25 @@ from .auth import (
     create_access_token,
     get_current_user,
 )
+load_dotenv()
 # Create tables
-Base.metadata.create_all(bind=engine)
 
 # FastAPI App
 app = FastAPI(title="BudgetBuddy")
 
 # CORS
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,6 +69,9 @@ def get_db():
         db.close()
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 # Home
 @app.get("/")
 def home():

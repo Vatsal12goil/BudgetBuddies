@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+bcrypt
+python-jose[cryptography]
+email-validator
+reportlab
+openpyxl
+alembic
+python-dotenv
