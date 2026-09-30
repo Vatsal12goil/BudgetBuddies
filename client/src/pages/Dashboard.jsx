@@ -66,6 +66,14 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsError, setAnalyticsError] = useState("");
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    monthly_income: "",
+    financial_preference: "Balanced",
+    account_setting: "Standard",
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
 
   const loadData = async () => {
   try {
@@ -103,6 +111,10 @@ export default function Dashboard() {
     const notificationData = await api.get("/notifications", {
       headers: { Authorization: `Bearer ${token}` },
     });
+
+    const profileData = await api.get("/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     console.log("NOTIFY", notificationData.data);
 
     // State update
@@ -113,6 +125,12 @@ export default function Dashboard() {
     setIncomes(incomeData.data);
     setGoals(goalData.data);
     setNotifications(notificationData.data);
+    setProfileForm({
+      name: profileData.data.name || "",
+      monthly_income: profileData.data.monthly_income ?? "",
+      financial_preference: profileData.data.financial_preference || "Balanced",
+      account_setting: profileData.data.account_setting || "Standard",
+    });
     setLoadingAnalytics(true);
 
     try {
@@ -212,6 +230,41 @@ const logout = () => {
   localStorage.removeItem("token");
   window.location.href = "/";
 };
+
+  const updateProfile = async () => {
+    if (!profileForm.name.trim()) {
+      alert("Name is required");
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileMessage("");
+
+    try {
+      const res = await api.put(
+        "/profile",
+        {
+          name: profileForm.name.trim(),
+          monthly_income:
+            profileForm.monthly_income === ""
+              ? null
+              : Number(profileForm.monthly_income),
+          financial_preference: profileForm.financial_preference,
+          account_setting: profileForm.account_setting,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setUser(res.data.profile);
+      setProfileMessage("Profile updated successfully.");
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to update profile");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   /* ==========================================
   Add Expense
@@ -631,7 +684,7 @@ const addExpense = async () => {
         </div>
 
         <div style={{ marginTop: 35 }}>
-          {["Dashboard", "Income", "Expenses", "Budget", "Savings","Analytics"].map((item) => (
+          {["Dashboard", "Income", "Expenses", "Budget", "Savings", "Analytics", "Profile"].map((item) => (
             <div
               key={item}
               onClick={() => setActiveTab(item)}
@@ -1746,6 +1799,135 @@ const addExpense = async () => {
 )}
   </div>
 )}
+{activeTab === "Profile" && (
+  <div
+    style={{
+      background: "white",
+      borderRadius: 18,
+      padding: 25,
+      marginTop: 25,
+      maxWidth: 760,
+      boxShadow: "0 8px 20px rgba(0,0,0,.05)",
+    }}
+  >
+    <h2>Profile Management</h2>
+    <p style={{ color: "#666", marginTop: 6 }}>
+      Manage your personal details, monthly income and financial preferences.
+    </p>
+
+    {profileMessage && (
+      <div
+        style={{
+          marginTop: 18,
+          padding: 12,
+          borderRadius: 10,
+          background: "#DCFCE7",
+          color: "#166534",
+          fontWeight: 600,
+        }}
+      >
+        ✅ {profileMessage}
+      </div>
+    )}
+
+    <div style={{ display: "grid", gap: 15, marginTop: 22 }}>
+      <div>
+        <label style={{ display: "block", marginBottom: 7, fontWeight: 600 }}>
+          Full Name
+        </label>
+        <input
+          style={inputStyle}
+          value={profileForm.name}
+          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+          placeholder="Your name"
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", marginBottom: 7, fontWeight: 600 }}>
+          Email
+        </label>
+        <input
+          style={{ ...inputStyle, background: "#F3F4F6" }}
+          value={user.email || ""}
+          disabled
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", marginBottom: 7, fontWeight: 600 }}>
+          Monthly Income
+        </label>
+        <input
+          type="number"
+          min="0"
+          style={inputStyle}
+          value={profileForm.monthly_income}
+          onChange={(e) => setProfileForm({ ...profileForm, monthly_income: e.target.value })}
+          placeholder="e.g. 20000"
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", marginBottom: 7, fontWeight: 600 }}>
+          Financial Preference
+        </label>
+        <select
+          style={inputStyle}
+          value={profileForm.financial_preference}
+          onChange={(e) => setProfileForm({ ...profileForm, financial_preference: e.target.value })}
+        >
+          <option>Conservative</option>
+          <option>Balanced</option>
+          <option>Aggressive Saving</option>
+        </select>
+      </div>
+
+      <div>
+        <label style={{ display: "block", marginBottom: 7, fontWeight: 600 }}>
+          Account Setting
+        </label>
+        <select
+          style={inputStyle}
+          value={profileForm.account_setting}
+          onChange={(e) => setProfileForm({ ...profileForm, account_setting: e.target.value })}
+        >
+          <option>Standard</option>
+          <option>Privacy Focused</option>
+          <option>Notifications Enabled</option>
+        </select>
+      </div>
+
+      <button
+        onClick={updateProfile}
+        disabled={profileSaving}
+        style={{
+          height: 48,
+          background: profileSaving ? "#9CA3AF" : "#5B3DF5",
+          color: "white",
+          border: "none",
+          borderRadius: 10,
+          fontWeight: 600,
+          cursor: profileSaving ? "not-allowed" : "pointer",
+        }}
+      >
+        {profileSaving ? "Saving..." : "Save Profile"}
+      </button>
+    </div>
+
+    <div
+      style={{
+        marginTop: 25,
+        padding: 16,
+        background: "#F5F3FF",
+        borderRadius: 12,
+      }}
+    >
+      <strong>Account Role:</strong> {user.role || "student"}
+    </div>
+  </div>
+)}
+
 {activeTab === "Analytics" && (
   <div>
     <h2>Analytics Dashboard</h2>
