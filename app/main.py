@@ -177,6 +177,54 @@ def update_profile(
     }
 
 
+# User Profile Management
+@app.get("/profile")
+def get_profile(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "monthly_income": current_user.monthly_income,
+        "financial_preference": current_user.financial_preference,
+        "account_setting": current_user.account_setting,
+    }
+
+
+@app.put("/profile")
+def update_profile(
+    profile: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not profile.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required")
+
+    if profile.monthly_income is not None and profile.monthly_income < 0:
+        raise HTTPException(status_code=400, detail="Monthly income cannot be negative")
+
+    current_user.name = profile.name.strip()
+    current_user.monthly_income = profile.monthly_income
+    current_user.financial_preference = profile.financial_preference
+    current_user.account_setting = profile.account_setting
+
+    db.commit()
+    db.refresh(current_user)
+
+    return {
+        "message": "Profile Updated Successfully",
+        "profile": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "role": current_user.role,
+            "monthly_income": current_user.monthly_income,
+            "financial_preference": current_user.financial_preference,
+            "account_setting": current_user.account_setting,
+        },
+    }
+
+
 # Add Expense
 @app.post("/expenses")
 def add_expense(
