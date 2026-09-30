@@ -62,12 +62,14 @@ export default function Dashboard() {
     current_saved: "",
   });
   const [notifications, setNotifications] = useState([]);
+  const [dashboardError, setDashboardError] = useState("");
   const [analytics, setAnalytics] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsError, setAnalyticsError] = useState("");
 
   const loadData = async () => {
   try {
+    setDashboardError("");
     const me = await api.get("/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -163,6 +165,7 @@ export default function Dashboard() {
   } catch (err) {
     console.error("FAILED API:", err.response?.config?.url);
     console.error(err.response?.data || err);
+    setDashboardError("Failed to load dashboard data. Please try again.");
   }
 };
 
@@ -660,6 +663,20 @@ const addExpense = async () => {
 
 {/* Main Content */}
 <main style={{ flex: 1, padding: 30 }}>
+  {dashboardError && (
+  <div
+    style={{
+      marginBottom: 20,
+      padding: 14,
+      background: "#FEE2E2",
+      color: "#991B1B",
+      borderRadius: 10,
+      fontWeight: 600,
+    }}
+  >
+    ⚠️ {dashboardError}
+  </div>
+)}
   {/* Header */}
   <div
     style={{
@@ -1881,10 +1898,14 @@ const addExpense = async () => {
       >
         <div
           style={{
-            width: `${Math.min(
-              (analytics.total_saved / analytics.total_target) * 100,
-              100
-            )}%`,
+            width: `${
+              analytics.total_target > 0
+                ? Math.min(
+                    (analytics.total_saved / analytics.total_target) * 100,
+                    100
+                  )
+                : 0
+            }%`,
             height: "100%",
             background: "#5B3DF5",
           }}
