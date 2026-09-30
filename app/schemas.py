@@ -23,6 +23,13 @@ class UserProfileUpdate(BaseModel):
     account_setting: Optional[str] = None
 
 
+class UserProfileUpdate(BaseModel):
+    name: str
+    monthly_income: Optional[float] = None
+    financial_preference: Optional[str] = None
+    account_setting: Optional[str] = None
+
+
 # ---------- EXPENSE ----------
 
 class ExpenseCreate(BaseModel):
