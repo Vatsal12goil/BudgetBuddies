@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from datetime import date
+from datetime import date as date_type, datetime
 from typing import Optional
 
 
@@ -20,8 +20,9 @@ class UserLogin(BaseModel):
 
 class ExpenseCreate(BaseModel):
     title: str
-    amount: float
+    amount: int
     category: str
+    date: date_type | None = None
 
 class ExpenseUpdate(BaseModel):
     title: str
@@ -33,14 +34,14 @@ class ExpenseUpdate(BaseModel):
 class IncomeCreate(BaseModel):
     amount: float
     source: str
-    date: date
+    date: date_type
     description: Optional[str] = None
 
 
 class IncomeUpdate(BaseModel):
     amount: float
     source: str
-    date: date
+    date: date_type
     description: Optional[str] = None
 
 
@@ -48,7 +49,7 @@ class IncomeResponse(BaseModel):
     id: int
     amount: float
     source: str
-    date: date
+    date: date_type
     description: Optional[str]
 
     class Config:
@@ -67,3 +68,28 @@ class BudgetUpdate(BaseModel):
     category: str
     amount: float
     month: str
+class SavingsGoalCreate(BaseModel):
+    goal_name: str
+    target_amount: float
+
+
+class SavingsGoalUpdate(BaseModel):
+    goal_name: str
+    target_amount: float
+
+
+class SavingsProgressUpdate(BaseModel):
+    current_saved: float
+class NotificationOut(BaseModel):
+    id: int
+    type: str
+    message: str
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationRead(BaseModel):
+    is_read: bool

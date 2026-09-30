@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Date
 from sqlalchemy.orm import relationship
-from datetime import date
-
+from datetime import date, datetime
+from sqlalchemy import DateTime, Boolean
 from .database import Base
 
 
@@ -17,6 +17,7 @@ class User(Base):
     expenses = relationship("Expense", back_populates="user")
     incomes = relationship("Income", back_populates="user")
     budgets = relationship("Budget", back_populates="user")
+    notifications = relationship("Notification", back_populates="owner")
 
 
 class Expense(Base):
@@ -26,6 +27,7 @@ class Expense(Base):
     title = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     category = Column(String, nullable=False)
+    date = Column(Date, default=date.today)
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="expenses")
@@ -54,3 +56,37 @@ class Budget(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="budgets")
+
+
+
+class SavingsGoal(Base):
+    __tablename__ = "savings_goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    goal_name = Column(String, nullable=False)
+    target_amount = Column(Float, nullable=False)
+    current_saved = Column(Float, default=0)
+
+    is_completed = Column(Boolean, default=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    type = Column(String)           # budget | savings
+    message = Column(String)
+
+    is_read = Column(Boolean, default=False)
+
+    related_id = Column(Integer, nullable=True)
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    owner = relationship("User", back_populates="notifications")

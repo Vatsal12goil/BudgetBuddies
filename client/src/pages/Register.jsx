@@ -27,7 +27,34 @@ export default function Register() {
     }
 
     try {
+      // Register user in backend
       await api.post("/register", form);
+
+      // Save account locally for Remember Me
+      const accounts = JSON.parse(
+        localStorage.getItem("savedAccounts") || "[]"
+      );
+
+      const account = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      };
+
+      const index = accounts.findIndex(
+        (a) => a.email === form.email
+      );
+
+      if (index >= 0) {
+        accounts[index] = account;
+      } else {
+        accounts.push(account);
+      }
+
+      localStorage.setItem(
+        "savedAccounts",
+        JSON.stringify(accounts)
+      );
 
       showToast(
         "success",
@@ -65,42 +92,60 @@ export default function Register() {
           <h1 className="logo">💰 BudgetBuddy</h1>
           <p className="subtitle">Create your account</p>
 
-          <input
-            className="input"
-            type="text"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
-            }
-          />
+          <form
+            autoComplete="on"
+            onSubmit={(e) => {
+              e.preventDefault();
+              register();
+            }}
+          >
+            <input
+              className="input"
+              type="text"
+              name="name"
+              autoComplete="name"
+              placeholder="Full Name"
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+            />
 
-          <input
-            className="input"
-            type="email"
-            placeholder="Email Address"
-            value={form.email}
-            onChange={(e) =>
-              setForm({ ...form, email: e.target.value })
-            }
-          />
+            <input
+              className="input"
+              type="email"
+              name="email"
+              autoComplete="username"
+              placeholder="Email Address"
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value })
+              }
+            />
 
-          <input
-            className="input"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) =>
-              setForm({ ...form, password: e.target.value })
-            }
-          />
+            <input
+              className="input"
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  password: e.target.value,
+                })
+              }
+            />
 
-          <button className="btn" onClick={register}>
-            Create Account
-          </button>
+            <button type="submit" className="btn">
+              Create Account
+            </button>
+          </form>
 
           <p className="link">
-            Already have an account? <Link to="/">Sign In</Link>
+            Already have an account?{" "}
+            <Link to="/">Sign In</Link>
           </p>
         </div>
       </div>
