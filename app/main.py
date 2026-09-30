@@ -840,6 +840,19 @@ def get_analytics(
         func.coalesce(func.sum(Expense.amount), 0)
     ).scalar()
 
+    # Savings summary
+    total_saved = (
+        db.query(func.coalesce(func.sum(SavingsGoal.current_saved), 0))
+        .filter(SavingsGoal.user_id == current_user.id)
+        .scalar()
+    )
+
+    total_target = (
+        db.query(func.coalesce(func.sum(SavingsGoal.target_amount), 0))
+        .filter(SavingsGoal.user_id == current_user.id)
+        .scalar()
+    )
+
     # Category summary
     category_data = (
         query_expense.with_entities(
@@ -861,6 +874,10 @@ def get_analytics(
             "income": total_income,
             "expense": total_expense,
             "balance": total_income - total_expense,
+        },
+        "savings": {
+            "total_saved": total_saved,
+            "total_target": total_target,
         },
         "category_summary": category_summary,
     }
