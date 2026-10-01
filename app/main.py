@@ -1294,17 +1294,17 @@ def generate_scheduled_notifications(
             .first()
         )
 
-        if previous_income or previous_expense:
-            existing = (
-                db.query(Notification)
-                .filter(
-                    Notification.user_id == current_user.id,
-                    Notification.type == "monthly_report",
-                    Notification.message.contains(previous_month),
-                )
-                .first()
+        existing = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.type == "monthly_report",
+                Notification.message.contains(previous_month),
             )
+            .first()
+        )
 
+        if previous_income or previous_expense:
             if not existing:
                 db.add(
                     Notification(
@@ -1316,6 +1316,9 @@ def generate_scheduled_notifications(
                         ),
                     )
                 )
+        elif existing:
+            # Remove stale empty-month report notifications created by the old logic.
+            db.delete(existing)
 
     db.commit()
 
