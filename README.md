@@ -169,7 +169,8 @@ Report requests use the configured backend API URL rather than a hardcoded produ
 | GET/POST/PUT/DELETE | `/income` | Income management |
 | GET/POST/PUT/DELETE | `/budget` | Budget management |
 | GET/POST/PUT/DELETE | `/goals` | Savings goal management |
-| GET | `/notifications` | User notifications |
+| GET | `/notifications` | User notifications and scheduled reminders |
+| PATCH | `/admin/users/{user_id}/role` | Admin role management |
 | GET | `/analytics` | Analytics summary |
 | GET | `/analytics/trends` | Trend data |
 | GET | `/dashboard` | Dashboard summary |
