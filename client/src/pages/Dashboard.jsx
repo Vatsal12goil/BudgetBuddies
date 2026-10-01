@@ -532,7 +532,7 @@ const addExpense = async () => {
         {
           category: budgetForm.category,
           amount: Number(budgetForm.amount),
-          month: budgetForm.month,
+          month: selectedMonth,
         },
         {
           headers: {
@@ -560,7 +560,7 @@ const addExpense = async () => {
       {
         category: budgetForm.category,
         amount: Number(budgetForm.amount),
-        month: budgetForm.month,
+        month: selectedMonth,
       },
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -571,7 +571,7 @@ const addExpense = async () => {
     setBudgetForm({
       category: "Food",
       amount: "",
-      month: currentMonth,
+      month: selectedMonth,
     });
 
     loadData();
@@ -604,6 +604,7 @@ const addExpense = async () => {
 
     try {
       await api.delete("/budget/reset", {
+        params: { month: selectedMonth },
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -1236,6 +1237,9 @@ const addExpense = async () => {
     }}
   >
     <h2>Add Expense</h2>
+    <p style={{ color: "#666", marginTop: 6 }}>
+      Selected Month: <strong>{selectedMonth}</strong>
+    </p>
 
     <div
       style={{
@@ -1436,17 +1440,18 @@ const addExpense = async () => {
         style={inputStyle}
       />
 
-      <input
-        type="month"
-        value={budgetForm.month}
-        onChange={(e) =>
-          setBudgetForm({
-            ...budgetForm,
-            month: e.target.value,
-          })
-        }
-        style={inputStyle}
-      />
+      <div
+        style={{
+          ...inputStyle,
+          display: "flex",
+          alignItems: "center",
+          background: "#F3F4F6",
+          color: "#374151",
+          fontWeight: 600,
+        }}
+      >
+        Selected Month: {selectedMonth}
+      </div>
 
       <button
         onClick={editingBudget ? updateBudget : createBudget}
