@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [editingIncome, setEditingIncome] = useState(null);
 
   const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const [budgetForm, setBudgetForm] = useState({
     category: "Food",
@@ -83,22 +84,28 @@ export default function Dashboard() {
     });
     console.log("ME", me.data);
 
+    const monthParams = { params: { month: selectedMonth } };
+
     const dash = await api.get("/dashboard", {
+      ...monthParams,
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log("DASH", dash.data);
 
     const budget = await api.get("/budget", {
+      ...monthParams,
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log("BUDGET", budget.data);
 
     const expenseData = await api.get("/expenses", {
+      ...monthParams,
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log("EXPENSE", expenseData.data);
 
     const incomeData = await api.get("/income", {
+      ...monthParams,
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log("INCOME", incomeData.data);
@@ -189,7 +196,7 @@ export default function Dashboard() {
 
 useEffect(() => {
   loadData();
-}, []);
+}, [selectedMonth]);
 const downloadPDF = async () => {
   const res = await fetch(`${api.defaults.baseURL}/report/pdf`, {
     headers: {
@@ -840,6 +847,27 @@ const addExpense = async () => {
                 marginTop: 25,
               }}
             >
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "white",
+                  borderRadius: 14,
+                  padding: "14px 18px",
+                  boxShadow: "0 8px 20px rgba(0,0,0,.05)",
+                }}
+              >
+                <strong>📅 Selected Month</strong>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  style={{ ...inputStyle, width: 180 }}
+                />
+              </div>
+
               <Card
                 icon="💳"
                 title="Total Balance"
@@ -891,7 +919,7 @@ const addExpense = async () => {
     }}
   >
     <h3>Recent Transactions</h3>
-    <span style={{ color: "#777" }}>This Month</span>
+    <span style={{ color: "#777" }}>{selectedMonth}</span>
   </div>
 
   <table
