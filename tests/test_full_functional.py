@@ -83,6 +83,30 @@ def test_new_user_does_not_get_empty_monthly_report(client):
     )
 
 
+def test_stale_empty_monthly_report_is_removed(client):
+    client, Session = client
+    token = register_and_login(client, "stale@example.com", "Stale User")
+    headers = auth_headers(token)
+
+    db = Session()
+    try:
+        user = db.query(main_module.User).filter(main_module.User.email == "stale@example.com").first()
+        db.add(
+            main_module.Notification(
+                user_id=user.id,
+                type="monthly_report",
+                message="📊 Your BudgetBuddy monthly report for 2026-09 is ready.",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/notifications", headers=headers)
+    assert response.status_code == 200, response.text
+    assert not any(n["type"] == "monthly_report" for n in response.json())
+
+
 def test_full_financial_workflow(client):
     client, _ = client
     token = register_and_login(client, "flow@example.com", "Flow User")
