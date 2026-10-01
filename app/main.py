@@ -806,6 +806,23 @@ def update_budget(
     if budget.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid budget amount")
 
+    duplicate = (
+        db.query(Budget)
+        .filter(
+            Budget.user_id == current_user.id,
+            Budget.category == budget.category,
+            Budget.month == budget.month,
+            Budget.id != budget_id,
+        )
+        .first()
+    )
+
+    if duplicate:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{budget.category} budget already exists for {budget.month}",
+        )
+
     record.category = budget.category
     record.amount = budget.amount
     record.month = budget.month
