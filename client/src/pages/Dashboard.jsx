@@ -228,6 +228,10 @@ export default function Dashboard() {
 };
 
 useEffect(() => {
+  setBudgetForm((prev) => ({
+    ...prev,
+    month: selectedMonth,
+  }));
   loadData();
 }, [selectedMonth]);
 const downloadPDF = async () => {
@@ -540,7 +544,7 @@ const addExpense = async () => {
       setBudgetForm({
         category: "Food",
         amount: "",
-        month: currentMonth,
+        month: selectedMonth,
       });
 
       loadData();
