@@ -308,13 +308,17 @@ def add_expense(
     new_total = category_spent + expense.amount
     percent = (new_total / category_budget) * 100
 
+    # Use a stable small integer for PostgreSQL instead of Python's hash(),
+    # whose value can exceed the INTEGER column range and changes between processes.
+    category_notification_id = valid_categories.index(expense.category) + 1
+
     # Duplicate notification avoid
     last_notification = (
         db.query(Notification)
         .filter(
             Notification.user_id == current_user.id,
             Notification.type == "budget",
-            Notification.related_id == hash(expense.category),
+            Notification.related_id == category_notification_id,
         )
         .order_by(Notification.created_at.desc())
         .first()
@@ -335,7 +339,7 @@ def add_expense(
                 user_id=current_user.id,
                 type="budget",
                 message=message,
-                related_id=hash(expense.category),
+                related_id=category_notification_id,
             )
         )
     new_expense = Expense(
