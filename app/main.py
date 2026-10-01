@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException  # pyright: ignore[reportMissingImports]
+from fastapi import FastAPI, Depends, HTTPException, Header  # pyright: ignore[reportMissingImports]
 from fastapi.middleware.cors import CORSMiddleware  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
 from sqlalchemy import func  # pyright: ignore[reportMissingImports]
@@ -1380,6 +1380,202 @@ def mark_notification_read(
     db.refresh(notification)   # ← ye line add karo
 
     return notification
+
+@app.post("/admin/migrate-local")
+def migrate_local_database(
+    payload: dict,
+    migration_secret: str | None = Header(default=None, alias="X-Migration-Secret"),
+    db: Session = Depends(get_db),
+):
+    import hmac
+
+    configured_secret = os.getenv("MIGRATION_SECRET")
+    if (
+        not configured_secret
+        or not migration_secret
+        or not hmac.compare_digest(migration_secret, configured_secret)
+    ):
+        raise HTTPException(status_code=403, detail="Migration not authorized")
+
+    required = {"users", "income", "expenses", "budgets", "savings_goals", "notifications"}
+    if not required.issubset(payload.keys()):
+        raise HTTPException(status_code=400, detail="Incomplete migration payload")
+
+    user_map = {}
+    inserted = {
+        "users": 0,
+        "income": 0,
+        "expenses": 0,
+        "budgets": 0,
+        "savings_goals": 0,
+        "notifications": 0,
+    }
+    goal_map = {}
+
+    # Users are matched by email. Existing production users are never overwritten.
+    for item in payload["users"]:
+        existing = db.query(User).filter(User.email == item["email"]).first()
+        if existing:
+            user_map[item["id"]] = existing.id
+            continue
+
+        new_user = User(
+            name=item["name"],
+            email=item["email"],
+            password=item["password"],
+            role=item.get("role") or "student",
+            monthly_income=item.get("monthly_income"),
+            financial_preference=item.get("financial_preference"),
+            account_setting=item.get("account_setting"),
+        )
+        db.add(new_user)
+        db.flush()
+        user_map[item["id"]] = new_user.id
+        inserted["users"] += 1
+
+    for item in payload["income"]:
+        user_id = user_map.get(item["user_id"])
+        if user_id is None:
+            continue
+        exists = (
+            db.query(Income)
+            .filter(
+                Income.user_id == user_id,
+                Income.amount == item["amount"],
+                Income.source == item["source"],
+                Income.date == item["date"],
+                Income.description == item.get("description"),
+            )
+            .first()
+        )
+        if not exists:
+            db.add(Income(
+                amount=item["amount"],
+                source=item["source"],
+                date=item["date"],
+                description=item.get("description"),
+                user_id=user_id,
+            ))
+            inserted["income"] += 1
+
+    for item in payload["expenses"]:
+        user_id = user_map.get(item["user_id"])
+        if user_id is None:
+            continue
+        exists = (
+            db.query(Expense)
+            .filter(
+                Expense.user_id == user_id,
+                Expense.title == item["title"],
+                Expense.amount == item["amount"],
+                Expense.category == item["category"],
+                Expense.date == item["date"],
+            )
+            .first()
+        )
+        if not exists:
+            db.add(Expense(
+                title=item["title"],
+                amount=item["amount"],
+                category=item["category"],
+                date=item["date"],
+                user_id=user_id,
+            ))
+            inserted["expenses"] += 1
+
+    for item in payload["budgets"]:
+        user_id = user_map.get(item["user_id"])
+        if user_id is None:
+            continue
+        exists = (
+            db.query(Budget)
+            .filter(
+                Budget.user_id == user_id,
+                Budget.category == item["category"],
+                Budget.amount == item["amount"],
+                Budget.month == item["month"],
+            )
+            .first()
+        )
+        if not exists:
+            db.add(Budget(
+                category=item["category"],
+                amount=item["amount"],
+                month=item["month"],
+                user_id=user_id,
+            ))
+            inserted["budgets"] += 1
+
+    for item in payload["savings_goals"]:
+        user_id = user_map.get(item["user_id"])
+        if user_id is None:
+            continue
+        exists = (
+            db.query(SavingsGoal)
+            .filter(
+                SavingsGoal.user_id == user_id,
+                SavingsGoal.goal_name == item["goal_name"],
+                SavingsGoal.target_amount == item["target_amount"],
+                SavingsGoal.current_saved == item["current_saved"],
+            )
+            .first()
+        )
+        if exists:
+            goal_map[item["id"]] = exists.id
+            continue
+
+        goal = SavingsGoal(
+            goal_name=item["goal_name"],
+            target_amount=item["target_amount"],
+            current_saved=item.get("current_saved", 0),
+            is_completed=item.get("is_completed", False),
+            user_id=user_id,
+        )
+        db.add(goal)
+        db.flush()
+        goal_map[item["id"]] = goal.id
+        inserted["savings_goals"] += 1
+
+    db.flush()
+
+    for item in payload["notifications"]:
+        user_id = user_map.get(item["user_id"])
+        if user_id is None:
+            continue
+
+        related_id = item.get("related_id")
+        if item.get("type") == "savings_reminder" and related_id in goal_map:
+            related_id = goal_map[related_id]
+
+        exists = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == user_id,
+                Notification.type == item["type"],
+                Notification.message == item["message"],
+                Notification.created_at == item.get("created_at"),
+            )
+            .first()
+        )
+        if not exists:
+            db.add(Notification(
+                user_id=user_id,
+                type=item["type"],
+                message=item["message"],
+                is_read=item.get("is_read", False),
+                related_id=related_id,
+                created_at=item.get("created_at"),
+            ))
+            inserted["notifications"] += 1
+
+    db.commit()
+
+    return {
+        "message": "Local database migrated successfully",
+        "mapped_users": len(user_map),
+        "inserted": inserted,
+    }
+
 
 @app.get("/admin-test")
 def admin_test(
