@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import date as date_type, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 
 # ---------- USER ----------
@@ -98,3 +98,6 @@ class NotificationOut(BaseModel):
 
 class NotificationRead(BaseModel):
     is_read: bool
+
+class RoleUpdate(BaseModel):
+    role: Literal["student", "premium", "admin"]
