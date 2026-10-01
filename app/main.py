@@ -1112,6 +1112,15 @@ def analytics_trends(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    categories = [
+        "Food",
+        "Travel",
+        "Shopping",
+        "Education",
+        "Entertainment",
+        "Miscellaneous",
+    ]
+
     incomes = (
         db.query(Income)
         .filter(Income.user_id == current_user.id)
@@ -1122,24 +1131,43 @@ def analytics_trends(
         .filter(Expense.user_id == current_user.id)
         .all()
     )
+    budgets = (
+        db.query(Budget)
+        .filter(Budget.user_id == current_user.id)
+        .all()
+    )
 
-    trends = {}
+    # Keep every month that has financial activity or a budget,
+    # so a month with budgets but no expenses is still visible as zero.
+    month_keys = set()
+
+    for item in incomes:
+        month_keys.add(item.date.strftime("%Y-%m"))
+
+    for item in expenses:
+        month_keys.add(item.date.strftime("%Y-%m"))
+
+    for item in budgets:
+        month_keys.add(item.month)
+
+    trends = {
+        month: {
+            "month": month,
+            "income": 0,
+            "expense": 0,
+            **{category: 0 for category in categories},
+        }
+        for month in month_keys
+    }
 
     for item in incomes:
         month_key = item.date.strftime("%Y-%m")
-        trends.setdefault(
-            month_key,
-            {"month": month_key, "income": 0, "expense": 0},
-        )
-        trends[month_key]["income"] += item.amount
+        trends[month_key]["income"] += float(item.amount)
 
     for item in expenses:
         month_key = item.date.strftime("%Y-%m")
-        trends.setdefault(
-            month_key,
-            {"month": month_key, "income": 0, "expense": 0},
-        )
-        trends[month_key]["expense"] += item.amount
+        trends[month_key]["expense"] += float(item.amount)
+        trends[month_key][item.category] += float(item.amount)
 
     return sorted(trends.values(), key=lambda x: x["month"])
 
