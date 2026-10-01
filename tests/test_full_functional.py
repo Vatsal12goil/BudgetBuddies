@@ -69,6 +69,20 @@ def auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_new_user_does_not_get_empty_monthly_report(client):
+    client, _ = client
+    token = register_and_login(client, "newuser@example.com", "New User")
+    headers = auth_headers(token)
+
+    response = client.get("/notifications", headers=headers)
+    assert response.status_code == 200, response.text
+
+    assert not any(
+        notification["type"] == "monthly_report"
+        for notification in response.json()
+    )
+
+
 def test_full_financial_workflow(client):
     client, _ = client
     token = register_and_login(client, "flow@example.com", "Flow User")
