@@ -397,6 +397,44 @@ def update_expense(
     if not record:
         raise HTTPException(status_code=404, detail="Expense not found")
 
+    expense_month = record.date.strftime("%Y-%m")
+    month_start, next_month_start = month_bounds(expense_month)
+
+    category_budget = (
+        db.query(func.coalesce(func.sum(Budget.amount), 0))
+        .filter(
+            Budget.user_id == current_user.id,
+            Budget.category == expense.category,
+            Budget.month == expense_month,
+        )
+        .scalar()
+    )
+
+    category_spent = (
+        db.query(func.coalesce(func.sum(Expense.amount), 0))
+        .filter(
+            Expense.user_id == current_user.id,
+            Expense.category == expense.category,
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
+            Expense.id != record.id,
+        )
+        .scalar()
+    )
+
+    if category_budget == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No budget set for {expense.category} in {expense_month}",
+        )
+
+    if category_spent + expense.amount > category_budget:
+        remaining = max(0, category_budget - category_spent)
+        raise HTTPException(
+            status_code=400,
+            detail=f"{expense.category} budget exceeded! Only ₹{remaining} left.",
+        )
+
     record.title = expense.title
     record.amount = expense.amount
     record.category = expense.category
@@ -776,19 +814,23 @@ def update_budget(
 
     return {"message": "Budget Updated"}
 
-# Reset All Budgets
+# Reset Budgets for the selected month only
 @app.delete("/budget/reset")
 def reset_budget(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    selected_month = month or date.today().strftime("%Y-%m")
+
     db.query(Budget).filter(
-        Budget.user_id == current_user.id
+        Budget.user_id == current_user.id,
+        Budget.month == selected_month,
     ).delete()
 
     db.commit()
 
-    return {"message": "All budgets reset successfully"}
+    return {"message": f"Budgets reset for {selected_month}"}
 # ==========================
 # Delete Budget
 # ==========================
