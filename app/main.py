@@ -30,6 +30,7 @@ from .schemas import (
     IncomeUpdate,
     BudgetCreate,
     BudgetUpdate,
+    RoleUpdate,
 )
 from .auth import (
     hash_password,
@@ -1329,4 +1330,28 @@ def admin_test(
         "message": "Admin access granted",
         "user": current_user.email,
         "role": current_user.role,
+    }
+
+
+@app.patch("/admin/users/{user_id}/role")
+def update_user_role(
+    user_id: int,
+    role_update: RoleUpdate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_role("admin")),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = role_update.role
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": "User role updated successfully",
+        "user_id": user.id,
+        "role": user.role,
+        "updated_by": current_admin.email,
     }
