@@ -1475,7 +1475,7 @@ const addExpense = async () => {
             setBudgetForm({
               category: "Food",
               amount: "",
-              month: currentMonth,
+              month: selectedMonth,
             });
           }}
           style={{
