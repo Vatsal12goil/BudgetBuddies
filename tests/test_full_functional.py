@@ -115,7 +115,7 @@ def test_full_financial_workflow(client):
     notifications = client.get("/notifications", headers=headers)
     assert notifications.status_code == 200, notifications.text
     assert any(
-        n["type"] == "budget" and "80%" in n["message"]
+        n["type"] == "budget" and "budget reached" in n["message"]
         for n in notifications.json()
     )
 
@@ -226,7 +226,7 @@ def test_negative_inputs_and_authorization(client):
     # Invalid IDs
     assert client.get("/expenses/999999", headers=h1).status_code in {404, 405}
     assert client.delete("/expenses/999999", headers=h1).status_code == 404
-    assert client.delete("/notifications/999999/read", headers=h1).status_code == 404
+    assert client.patch("/notifications/999999/read", headers=h1).status_code == 404
 
     # Empty-data situation for second user
     assert client.get("/expenses", headers=h2).json() == []
