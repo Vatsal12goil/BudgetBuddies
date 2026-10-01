@@ -321,14 +321,7 @@ const addExpense = async () => {
   }
 
   const amount = Number(expenseForm.amount);
-  const remaining = Math.max(0, dashboard.remaining_amount);
-
-  // 🚫 Budget limit check
-  if (amount > remaining) {
-    alert(`Budget limit reached! Only ₹${remaining} remaining.`);
-    return;
-  }
-
+  // Budget/category limits are enforced by the backend for the selected month.
   try {
     await api.post(
       "/expenses",
@@ -804,7 +797,14 @@ const addExpense = async () => {
       </p>
     </div>
 
-    <div style={{ display: "flex", gap: 10 }}>
+    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      <strong>📅 {selectedMonth}</strong>
+      <input
+        type="month"
+        value={selectedMonth}
+        onChange={(e) => setSelectedMonth(e.target.value)}
+        style={{ ...inputStyle, width: 155 }}
+      />
       <button
         onClick={downloadPDF}
         style={headerBtn}
@@ -892,27 +892,6 @@ const addExpense = async () => {
                 marginTop: 25,
               }}
             >
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "white",
-                  borderRadius: 14,
-                  padding: "14px 18px",
-                  boxShadow: "0 8px 20px rgba(0,0,0,.05)",
-                }}
-              >
-                <strong>📅 Selected Month</strong>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  style={{ ...inputStyle, width: 180 }}
-                />
-              </div>
-
               <Card
                 icon="💳"
                 title="Total Balance"
@@ -1512,7 +1491,7 @@ const addExpense = async () => {
           marginTop: 10,
         }}
       >
-  Reset All Budgets
+  Reset Selected Month Budgets
 </button>
 
     {/* Current Budget Summary */}
