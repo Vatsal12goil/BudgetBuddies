@@ -217,23 +217,40 @@ def add_expense(
     if expense.category not in valid_categories:
         raise HTTPException(status_code=400, detail="Invalid category")
     # ==========================
-    # Budget Limit Validation
+    # Month Budget Limit Validation
     # ==========================
+    # Expenses must be validated against the month of the expense date,
+    # not against totals from every month in the account.
+    expense_date = expense.date or date.today()
+    current_month = expense_date.strftime("%Y-%m")
+    month_start, next_month_start = month_bounds(current_month)
+
     total_budget = (
         db.query(func.coalesce(func.sum(Budget.amount), 0))
-        .filter(Budget.user_id == current_user.id)
+        .filter(
+            Budget.user_id == current_user.id,
+            Budget.month == current_month,
+        )
         .scalar()
     )
 
     total_income = (
         db.query(func.coalesce(func.sum(Income.amount), 0))
-        .filter(Income.user_id == current_user.id)
+        .filter(
+            Income.user_id == current_user.id,
+            Income.date >= month_start,
+            Income.date < next_month_start,
+        )
         .scalar()
     )
 
     total_expense = (
         db.query(func.coalesce(func.sum(Expense.amount), 0))
-        .filter(Expense.user_id == current_user.id)
+        .filter(
+            Expense.user_id == current_user.id,
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
+        )
         .scalar()
     )
 
@@ -242,12 +259,10 @@ def add_expense(
     if expense.amount > available:
         raise HTTPException(
             status_code=400,
-            detail=f"Budget limit reached! Only ₹{available} remaining.",
+            detail=f"Budget limit reached! Only ₹{available} remaining for {current_month}.",
         )
 
     # ===== Category Budget Validation =====#
-    expense_date = expense.date or date.today()
-    current_month = expense_date.strftime("%Y-%m")
 
     category_budget = (
         db.query(func.coalesce(func.sum(Budget.amount), 0))
