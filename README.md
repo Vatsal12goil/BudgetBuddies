@@ -10,17 +10,19 @@ BudgetBuddy is a full-stack personal finance management application built with *
 
 - 🔐 JWT authentication with protected APIs
 - 👤 User-specific data isolation
+- 🧑‍💼 Role-based access control (Student / Premium User / Admin)
 - 💸 Expense CRUD management
 - 💵 Income CRUD management
 - 🏷️ Expense categories
 - 💰 Category-based monthly budgets
 - 🚨 Budget utilization and threshold notifications
 - 🎯 Savings goals and progress tracking
-- 🔔 Notification management and mark-as-read
+- 🔔 Budget alerts, savings reminders, monthly report notifications, and mark-as-read
 - 📊 Dashboard financial summary
 - 📈 Analytics and spending trends
 - 🥧 Category distribution charts
 - 📅 Monthly income/expense trends
+- 👤 Profile management and financial preferences
 - 📄 PDF financial reports
 - 📊 Excel financial reports
 - 🩺 Backend health endpoint
@@ -165,8 +167,8 @@ Report requests use the configured backend API URL rather than a hardcoded produ
 | GET | `/health` | Backend health check |
 | GET/POST/PUT/DELETE | `/expenses` | Expense management |
 | GET/POST/PUT/DELETE | `/income` | Income management |
-| GET/POST/PUT/DELETE | `/budgets` | Budget management |
-| GET/POST/PUT/DELETE | `/savings-goals` | Savings goal management |
+| GET/POST/PUT/DELETE | `/budget` | Budget management |
+| GET/POST/PUT/DELETE | `/goals` | Savings goal management |
 | GET | `/notifications` | User notifications |
 | GET | `/analytics` | Analytics summary |
 | GET | `/analytics/trends` | Trend data |
@@ -274,7 +276,7 @@ http://localhost:5173
 
 ## 🧪 Local Verification
 
-The application has been locally verified for:
+The application has been locally verified and smoke-tested for:
 
 - Backend startup and health endpoint
 - JWT authentication
@@ -286,6 +288,10 @@ The application has been locally verified for:
 - Frontend production build with `npm run build`
 - Environment-based frontend API configuration
 - User data ownership checks
+- Profile persistence and Alembic migration
+- Notification read/unread flow and scheduled notification generation
+- RBAC guard behavior
+- Pytest smoke tests (`pytest -q`)
 
 ---
 
@@ -303,7 +309,7 @@ The codebase includes production-oriented configuration for:
 - Git-safe environment examples
 - Ignoring local databases, virtual environments, build output, and generated reports
 
-Deployment itself is intentionally kept separate from local development verification.
+Deployment itself is intentionally kept separate from local development verification. No deployment is included in this completion pass.
 
 ---
 
