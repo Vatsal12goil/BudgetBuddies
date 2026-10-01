@@ -338,12 +338,15 @@ def add_expense(
 # My Expenses
 @app.get("/expenses")
 def my_expenses(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(Expense).filter(
-        Expense.user_id == current_user.id
-    ).all()
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+    if month:
+        month_start, next_month_start = month_bounds(month)
+        query = query.filter(Expense.date >= month_start, Expense.date < next_month_start)
+    return query.order_by(Expense.date.desc()).all()
 # Update Expense
 @app.put("/expenses/{expense_id}")
 def update_expense(
@@ -440,14 +443,15 @@ def add_income(
 # My Income
 @app.get("/income")
 def my_income(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
-        db.query(Income)
-        .filter(Income.user_id == current_user.id)
-        .all()
-    )
+    query = db.query(Income).filter(Income.user_id == current_user.id)
+    if month:
+        month_start, next_month_start = month_bounds(month)
+        query = query.filter(Income.date >= month_start, Income.date < next_month_start)
+    return query.order_by(Income.date.desc()).all()
 
 
 # Update Income
@@ -522,58 +526,73 @@ def delete_income(
 # =====================================================
 @app.get("/dashboard")
 def dashboard_summary(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    current_month = date.today().strftime("%Y-%m")
+    selected_month = month or date.today().strftime("%Y-%m")
+    month_start, next_month_start = month_bounds(selected_month)
 
-    # Total Income
     total_income = (
         db.query(func.coalesce(func.sum(Income.amount), 0))
-        .filter(Income.user_id == current_user.id)
+        .filter(
+            Income.user_id == current_user.id,
+            Income.date >= month_start,
+            Income.date < next_month_start,
+        )
         .scalar()
     )
 
-    # Total Expense
     total_expense = (
         db.query(func.coalesce(func.sum(Expense.amount), 0))
-        .filter(Expense.user_id == current_user.id)
+        .filter(
+            Expense.user_id == current_user.id,
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
+        )
         .scalar()
     )
 
-    # Total Budget
     total_budget = (
         db.query(func.coalesce(func.sum(Budget.amount), 0))
-        .filter(Budget.user_id == current_user.id)
+        .filter(
+            Budget.user_id == current_user.id,
+            Budget.month == selected_month,
+        )
         .scalar()
     )
 
-    # Last 5 incomes
     recent_income = (
         db.query(Income)
-        .filter(Income.user_id == current_user.id)
-        .order_by(Income.id.desc())
+        .filter(
+            Income.user_id == current_user.id,
+            Income.date >= month_start,
+            Income.date < next_month_start,
+        )
+        .order_by(Income.date.desc(), Income.id.desc())
         .limit(5)
         .all()
     )
 
-    # Last 5 expenses
     recent_expense = (
         db.query(Expense)
-        .filter(Expense.user_id == current_user.id)
-        .order_by(Expense.id.desc())
+        .filter(
+            Expense.user_id == current_user.id,
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
+        )
+        .order_by(Expense.date.desc(), Expense.id.desc())
         .limit(5)
         .all()
     )
 
     recent = []
-
     for i in recent_income:
         recent.append({
             "type": "Income",
             "title": i.source,
             "amount": i.amount,
-            "date": str(i.date)
+            "date": str(i.date),
         })
 
     for e in recent_expense:
@@ -581,22 +600,15 @@ def dashboard_summary(
             "type": "Expense",
             "title": e.title,
             "amount": e.amount,
-            "date": "-"
+            "date": str(e.date),
         })
 
     recent.sort(key=lambda x: x["date"], reverse=True)
-    # Category wise budget + spent
-    current_month = date.today().strftime("%Y-%m")
-    month_start = date.today().replace(day=1)
-    if month_start.month == 12:
-        next_month_start = date(month_start.year + 1, 1, 1)
-    else:
-        next_month_start = date(month_start.year, month_start.month + 1, 1)
-    category_summary = []
 
+    category_summary = []
     categories = [
-        "Food","Travel","Shopping",
-        "Education","Entertainment","Miscellaneous"
+        "Food", "Travel", "Shopping",
+        "Education", "Entertainment", "Miscellaneous"
     ]
 
     for cat in categories:
@@ -605,7 +617,7 @@ def dashboard_summary(
             .filter(
                 Budget.user_id == current_user.id,
                 Budget.category == cat,
-                Budget.month == current_month,
+                Budget.month == selected_month,
             )
             .scalar()
         )
@@ -624,24 +636,22 @@ def dashboard_summary(
         category_summary.append({
             "category": cat,
             "budget": budget,
-            "spent": min(spent, budget),   # UI me budget se upar nahi dikhayega
-            "actual_spent": spent,         # Original value preserve rahegi
+            "spent": min(spent, budget),
+            "actual_spent": spent,
         })
 
-    # Available Budget
     remaining_amount = max(0, total_budget - total_expense)
 
     return {
-    "total_income": total_income,
-    "total_expense": total_expense,
-    "total_budget": total_budget,
+        "month": selected_month,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "total_budget": total_budget,
+        "remaining_amount": remaining_amount,
+        "recent_activity": recent[:5],
+        "category_summary": category_summary,
+    }
 
-    # ✅ sahi
-    "remaining_amount": remaining_amount,
-
-    "recent_activity": recent[:5],
-    "category_summary": category_summary,
-}
 # =====================================================
 # Create / Update Budget
 # One budget per category per month
@@ -698,14 +708,14 @@ def create_budget(
 # View Budgets
 @app.get("/budget")
 def get_budgets(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
-        db.query(Budget)
-        .filter(Budget.user_id == current_user.id)
-        .all()
-    )
+    query = db.query(Budget).filter(Budget.user_id == current_user.id)
+    if month:
+        query = query.filter(Budget.month == month)
+    return query.order_by(Budget.month.desc(), Budget.id.desc()).all()
 # ==========================
 # Update Budget
 # ==========================
