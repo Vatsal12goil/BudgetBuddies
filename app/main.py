@@ -308,9 +308,12 @@ def add_expense(
     new_total = category_spent + expense.amount
     percent = (new_total / category_budget) * 100
 
-    # Use a stable small integer for PostgreSQL instead of Python's hash(),
-    # whose value can exceed the INTEGER column range and changes between processes.
-    category_notification_id = valid_categories.index(expense.category) + 1
+    # Use a stable month/category integer that always fits PostgreSQL INTEGER.
+    # This keeps budget notifications independent for each month.
+    category_notification_id = (
+        int(current_month.replace("-", "")) * 10
+        + valid_categories.index(expense.category) + 1
+    )
 
     # Duplicate notification avoid
     last_notification = (
