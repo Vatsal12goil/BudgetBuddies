@@ -1267,32 +1267,55 @@ def generate_scheduled_notifications(
             )
 
     # Monthly report notification during the first 7 days of a new month.
+    # Only create it when the user had financial activity in the previous month.
     if now.day <= 7:
         previous_month = (
             (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
         )
+        previous_month_start, previous_month_end = month_bounds(previous_month)
 
-        existing = (
-            db.query(Notification)
+        previous_income = (
+            db.query(Income)
             .filter(
-                Notification.user_id == current_user.id,
-                Notification.type == "monthly_report",
-                Notification.message.contains(previous_month),
+                Income.user_id == current_user.id,
+                Income.date >= previous_month_start,
+                Income.date < previous_month_end,
             )
             .first()
         )
 
-        if not existing:
-            db.add(
-                Notification(
-                    user_id=current_user.id,
-                    type="monthly_report",
-                    message=(
-                        f"📊 Your BudgetBuddy monthly report for "
-                        f"{previous_month} is ready."
-                    ),
-                )
+        previous_expense = (
+            db.query(Expense)
+            .filter(
+                Expense.user_id == current_user.id,
+                Expense.date >= previous_month_start,
+                Expense.date < previous_month_end,
             )
+            .first()
+        )
+
+        if previous_income or previous_expense:
+            existing = (
+                db.query(Notification)
+                .filter(
+                    Notification.user_id == current_user.id,
+                    Notification.type == "monthly_report",
+                    Notification.message.contains(previous_month),
+                )
+                .first()
+            )
+
+            if not existing:
+                db.add(
+                    Notification(
+                        user_id=current_user.id,
+                        type="monthly_report",
+                        message=(
+                            f"📊 Your BudgetBuddy monthly report for "
+                            f"{previous_month} is ready."
+                        ),
+                    )
+                )
 
     db.commit()
 
