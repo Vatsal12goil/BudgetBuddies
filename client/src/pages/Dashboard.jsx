@@ -143,6 +143,7 @@ export default function Dashboard() {
     try {
       // Main analytics data
       const analyticsRes = await api.get("/analytics", {
+        ...monthParams,
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -299,6 +300,10 @@ const addExpense = async () => {
         title: expenseForm.title,
         amount,
         category: expenseForm.category,
+        date:
+          selectedMonth === currentMonth
+            ? new Date().toISOString().split("T")[0]
+            : selectedMonth + "-01",
       },
       {
         headers: {
@@ -392,7 +397,10 @@ const addExpense = async () => {
           amount: Number(incomeForm.amount),
           source: incomeForm.source,
           description: incomeForm.description,
-          date: new Date().toISOString().split("T")[0],
+          date:
+            selectedMonth === currentMonth
+              ? new Date().toISOString().split("T")[0]
+              : selectedMonth + "-01",
         },
         {
           headers: {
