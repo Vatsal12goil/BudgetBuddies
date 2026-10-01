@@ -74,6 +74,25 @@ def get_db():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def month_bounds(month: str):
+    try:
+        parsed = datetime.strptime(month, "%Y-%m")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid month format. Use YYYY-MM",
+        ) from exc
+
+    start = parsed.date().replace(day=1)
+    if start.month == 12:
+        end = date(start.year + 1, 1, 1)
+    else:
+        end = date(start.year, start.month + 1, 1)
+
+    return start, end
+
 # Home
 @app.get("/")
 def home():
@@ -226,7 +245,8 @@ def add_expense(
         )
 
     # ===== Category Budget Validation =====#
-    current_month = (expense.date or date.today()).strftime("%Y-%m")
+    expense_date = expense.date or date.today()
+    current_month = expense_date.strftime("%Y-%m")
 
     category_budget = (
         db.query(func.coalesce(func.sum(Budget.amount), 0))
@@ -238,11 +258,19 @@ def add_expense(
         .scalar()
     )
 
+    month_start = expense_date.replace(day=1)
+    if month_start.month == 12:
+        next_month_start = date(month_start.year + 1, 1, 1)
+    else:
+        next_month_start = date(month_start.year, month_start.month + 1, 1)
+
     category_spent = (
         db.query(func.coalesce(func.sum(Expense.amount), 0))
         .filter(
             Expense.user_id == current_user.id,
             Expense.category == expense.category,
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
         )
         .scalar()
     )
@@ -543,6 +571,11 @@ def dashboard_summary(
     recent.sort(key=lambda x: x["date"], reverse=True)
     # Category wise budget + spent
     current_month = date.today().strftime("%Y-%m")
+    month_start = date.today().replace(day=1)
+    if month_start.month == 12:
+        next_month_start = date(month_start.year + 1, 1, 1)
+    else:
+        next_month_start = date(month_start.year, month_start.month + 1, 1)
     category_summary = []
 
     categories = [
@@ -566,7 +599,8 @@ def dashboard_summary(
             .filter(
                 Expense.user_id == current_user.id,
                 Expense.category == cat,
-                func.strftime("%Y-%m", Expense.date) == current_month,
+                Expense.date >= month_start,
+                Expense.date < next_month_start,
             )
             .scalar()
         )
@@ -895,16 +929,14 @@ def get_analytics(
 
     # Month filter (YYYY-MM)
     if month:
-        try:
-            datetime.strptime(month, "%Y-%m")
-        except ValueError:
-            raise HTTPException(400, detail="Invalid month format. Use YYYY-MM")
-
+        month_start, next_month_start = month_bounds(month)
         query_income = query_income.filter(
-            func.strftime("%Y-%m", Income.date) == month
+            Income.date >= month_start,
+            Income.date < next_month_start,
         )
         query_expense = query_expense.filter(
-            func.strftime("%Y-%m", Expense.date) == month
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
         )
 
     total_income = query_income.with_entities(
@@ -962,70 +994,56 @@ def analytics_trends(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    income_data = (
-        db.query(
-            func.strftime("%Y-%m", Income.date).label("month"),
-            func.sum(Income.amount).label("income"),
-        )
+    incomes = (
+        db.query(Income)
         .filter(Income.user_id == current_user.id)
-        .group_by("month")
         .all()
     )
-
-    expense_data = (
-        db.query(
-            func.strftime("%Y-%m", Expense.date).label("month"),
-            func.sum(Expense.amount).label("expense"),
-        )
+    expenses = (
+        db.query(Expense)
         .filter(Expense.user_id == current_user.id)
-        .group_by("month")
         .all()
     )
 
     trends = {}
 
-    for m, amount in income_data:
-        trends[m] = {
-            "month": m,
-            "income": amount,
-            "expense": 0,
-        }
+    for item in incomes:
+        month_key = item.date.strftime("%Y-%m")
+        trends.setdefault(
+            month_key,
+            {"month": month_key, "income": 0, "expense": 0},
+        )
+        trends[month_key]["income"] += item.amount
 
-    for m, amount in expense_data:
-        if m not in trends:
-            trends[m] = {
-                "month": m,
-                "income": 0,
-                "expense": amount,
-            }
-        else:
-            trends[m]["expense"] = amount
+    for item in expenses:
+        month_key = item.date.strftime("%Y-%m")
+        trends.setdefault(
+            month_key,
+            {"month": month_key, "income": 0, "expense": 0},
+        )
+        trends[month_key]["expense"] += item.amount
 
     return sorted(trends.values(), key=lambda x: x["month"])
+
+
 @app.get("/report/pdf")
 def generate_pdf(
     month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if month:
-        try:
-            datetime.strptime(month, "%Y-%m")
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid month format. Use YYYY-MM",
-            )
-
     income_query = db.query(Income).filter(Income.user_id == current_user.id)
     expense_query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
     if month:
+        month_start, next_month_start = month_bounds(month)
         income_query = income_query.filter(
-            func.strftime("%Y-%m", Income.date) == month
+            Income.date >= month_start,
+            Income.date < next_month_start,
         )
         expense_query = expense_query.filter(
-            func.strftime("%Y-%m", Expense.date) == month
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
         )
 
     income = income_query.with_entities(
