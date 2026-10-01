@@ -41,3 +41,9 @@ services:
           name: budgetbuddy-api
           type: web
           envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  - name: budgetbuddy-production-db
+    postgresMajorVersion: "18"
+    plan: free
+    region: oregon
