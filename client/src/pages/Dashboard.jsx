@@ -124,9 +124,41 @@ export default function Dashboard() {
     });
     console.log("NOTIFY", notificationData.data);
 
+    // Build the selected month's category budget view from the
+    // already month-filtered budget and expense responses.
+    // This keeps the budget section consistent with the selected month.
+    const categories = [
+      "Food",
+      "Travel",
+      "Shopping",
+      "Education",
+      "Entertainment",
+      "Miscellaneous",
+    ];
+
+    const selectedCategorySummary = categories.map((category) => {
+      const budgetAmount = budget.data
+        .filter((item) => item.category === category)
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+      const expenseAmount = expenseData.data
+        .filter((item) => item.category === category)
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+      return {
+        category,
+        budget: budgetAmount,
+        spent: Math.min(expenseAmount, budgetAmount),
+        actual_spent: expenseAmount,
+      };
+    });
+
     // State update
     setUser(me.data);
-    setDashboard(dash.data);
+    setDashboard({
+      ...dash.data,
+      category_summary: selectedCategorySummary,
+    });
     setBudgets(budget.data);
     setExpenses(expenseData.data);
     setIncomes(incomeData.data);
