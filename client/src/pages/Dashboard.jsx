@@ -2150,6 +2150,8 @@ const addExpense = async () => {
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </div>
+
     {/* Savings Progress */}
     <div
       style={{
