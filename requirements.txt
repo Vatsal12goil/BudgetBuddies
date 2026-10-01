@@ -9,3 +9,5 @@ reportlab
 openpyxl
 alembic
 python-dotenv
+pytest
+httpx
