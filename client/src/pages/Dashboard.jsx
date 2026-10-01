@@ -1216,10 +1216,15 @@ const addExpense = async () => {
     }}
   >
     <h2>Add Expense</h2>
-    <p style={{ color: "#666", marginTop: 6 }}>
-      Selected Month: <strong>{selectedMonth}</strong>
-    </p>
-
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, alignItems: "center", marginTop: 10 }}>
+      <div>
+        <label style={{ display: "block", color: "#666", marginBottom: 6 }}>Expense Month</label>
+        <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={inputStyle} />
+      </div>
+      <div style={{ color: "#5B3DF5", fontWeight: 600, paddingTop: 24 }}>
+        Budget automatically synced to {selectedMonth}
+      </div>
+    </div>
     <div
       style={{
         display: "grid",
@@ -2111,31 +2116,40 @@ const addExpense = async () => {
         )}
       </div>
 
-      {/* Monthly Bar Chart */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 15,
-          padding: 20,
-          boxShadow: "0 5px 15px rgba(0,0,0,.05)",
-        }}
-      >
-        <h3>Monthly Income vs Expense</h3>
+      {/* Monthly Category-wise Expense Chart */}
+      <div style={{ gridColumn: "1 / -1", background: "#fff", borderRadius: 15, padding: 20, boxShadow: "0 5px 15px rgba(0,0,0,.05)" }}>
+        <h3>Monthly Category-wise Expenses</h3>
+        <p style={{ color: "#666", marginTop: 0 }}>Every month stays separate. Categories without expenses remain ₹0.</p>
+        <ResponsiveContainer width="100%" height={340}>
+          <BarChart data={analytics.monthly_trends}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip formatter={(value) => "₹" + value} />
+            <Bar dataKey="Food" stackId="expenses" fill="#5B3DF5" />
+            <Bar dataKey="Travel" stackId="expenses" fill="#22C55E" />
+            <Bar dataKey="Shopping" stackId="expenses" fill="#F59E0B" />
+            <Bar dataKey="Education" stackId="expenses" fill="#EF4444" />
+            <Bar dataKey="Entertainment" stackId="expenses" fill="#0EA5E9" />
+            <Bar dataKey="Miscellaneous" stackId="expenses" fill="#A855F7" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
+      {/* Monthly Income vs Expense */}
+      <div style={{ gridColumn: "1 / -1", background: "#fff", borderRadius: 15, padding: 20, boxShadow: "0 5px 15px rgba(0,0,0,.05)" }}>
+        <h3>Monthly Income vs Expense</h3>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={analytics.monthly_trends}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip />
-
             <Bar dataKey="income" fill="#22C55E" />
             <Bar dataKey="expense" fill="#EF4444" />
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
-
     {/* Savings Progress */}
     <div
       style={{
