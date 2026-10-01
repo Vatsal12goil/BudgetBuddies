@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import date as date_type, datetime
 from typing import Optional
 
@@ -14,13 +14,6 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-
-
-class UserProfileUpdate(BaseModel):
-    name: str
-    monthly_income: Optional[float] = None
-    financial_preference: Optional[str] = None
-    account_setting: Optional[str] = None
 
 
 class UserProfileUpdate(BaseModel):
@@ -66,8 +59,7 @@ class IncomeResponse(BaseModel):
     date: date_type
     description: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------- BUDGET ----------
@@ -101,8 +93,7 @@ class NotificationOut(BaseModel):
     is_read: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NotificationRead(BaseModel):
