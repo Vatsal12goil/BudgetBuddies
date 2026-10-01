@@ -364,6 +364,9 @@ def update_expense(
     if expense.category not in valid_categories:
         raise HTTPException(status_code=400, detail="Invalid category")
 
+    if expense.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid expense amount")
+
     record = (
         db.query(Expense)
         .filter(
@@ -466,6 +469,18 @@ def update_income(
 
     if not record:
         raise HTTPException(status_code=404, detail="Income not found")
+
+    valid_sources = [
+        "Pocket Money",
+        "Scholarship",
+        "Freelance Income",
+    ]
+
+    if income.source not in valid_sources:
+        raise HTTPException(status_code=400, detail="Invalid income source")
+
+    if income.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid income amount")
 
     record.amount = income.amount
     record.source = income.source
@@ -713,6 +728,21 @@ def update_budget(
     if not record:
         raise HTTPException(status_code=404, detail="Budget not found")
 
+    valid_categories = [
+        "Food",
+        "Travel",
+        "Shopping",
+        "Education",
+        "Entertainment",
+        "Miscellaneous",
+    ]
+
+    if budget.category not in valid_categories:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    if budget.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid budget amount")
+
     record.category = budget.category
     record.amount = budget.amount
     record.month = budget.month
@@ -806,6 +836,9 @@ def update_goal(
 
     if not record:
         raise HTTPException(404, detail="Goal not found")
+
+    if not goal.goal_name.strip():
+        raise HTTPException(400, detail="Goal name required")
 
     if goal.target_amount <= 0:
         raise HTTPException(400, detail="Invalid target amount")
