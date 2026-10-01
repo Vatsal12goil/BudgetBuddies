@@ -1119,24 +1119,18 @@ def generate_excel(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if month:
-        try:
-            datetime.strptime(month, "%Y-%m")
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid month format. Use YYYY-MM",
-            )
-
     income_query = db.query(Income).filter(Income.user_id == current_user.id)
     expense_query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
     if month:
+        month_start, next_month_start = month_bounds(month)
         income_query = income_query.filter(
-            func.strftime("%Y-%m", Income.date) == month
+            Income.date >= month_start,
+            Income.date < next_month_start,
         )
         expense_query = expense_query.filter(
-            func.strftime("%Y-%m", Expense.date) == month
+            Expense.date >= month_start,
+            Expense.date < next_month_start,
         )
 
     income = income_query.with_entities(
