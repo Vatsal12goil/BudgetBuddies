@@ -2038,35 +2038,57 @@ const addExpense = async () => {
       >
         <h3>Category Spending</h3>
 
-        <ResponsiveContainer width="100%" height={260}>
-          <PieChart>
-            <Pie
-              data={analytics.category_summary}
-              dataKey="spent"
-              nameKey="category"
-              outerRadius={90}
-              label
-            >
-              {analytics.category_summary.map((_, i) => (
-                <Cell
-                  key={i}
-                  fill={
-                    [
-                      "#5B3DF5",
-                      "#22C55E",
-                      "#F59E0B",
-                      "#EF4444",
-                      "#0EA5E9",
-                      "#A855F7",
-                    ][i % 6]
-                  }
-                />
-              ))}
-            </Pie>
-
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+{analytics.category_summary.some((item) => item.spent > 0) ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={analytics.category_summary.filter((item) => item.spent > 0)}
+                dataKey="spent"
+                nameKey="category"
+                outerRadius={90}
+                label
+              >
+                {analytics.category_summary
+                  .filter((item) => item.spent > 0)
+                  .map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        [
+                          "#5B3DF5",
+                          "#22C55E",
+                          "#F59E0B",
+                          "#EF4444",
+                          "#0EA5E9",
+                          "#A855F7",
+                        ][i % 6]
+                      }
+                    />
+                  ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div
+            style={{
+              height: 260,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              color: "#777",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 36 }}>📊</div>
+              <strong>No spending in {selectedMonth}</strong>
+              <p style={{ marginTop: 8 }}>
+                Add an expense to see category-wise spending.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Monthly Bar Chart */}
