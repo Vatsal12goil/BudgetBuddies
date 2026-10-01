@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware  # pyright: ignore[reportMiss
 from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
 from sqlalchemy import func  # pyright: ignore[reportMissingImports]
 from .models import SavingsGoal
-from datetime import date
+from datetime import date, datetime, timedelta
 from fastapi.responses import FileResponse
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
@@ -36,6 +36,7 @@ from .auth import (
     verify_password,
     create_access_token,
     get_current_user,
+    require_role,
 )
 load_dotenv()
 # Create tables
@@ -126,54 +127,6 @@ def me(current_user: User = Depends(get_current_user)):
         "name": current_user.name,
         "email": current_user.email,
         "role": current_user.role,
-    }
-
-
-# User Profile Management
-@app.get("/profile")
-def get_profile(current_user: User = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
-        "role": current_user.role,
-        "monthly_income": current_user.monthly_income,
-        "financial_preference": current_user.financial_preference,
-        "account_setting": current_user.account_setting,
-    }
-
-
-@app.put("/profile")
-def update_profile(
-    profile: UserProfileUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    if not profile.name.strip():
-        raise HTTPException(status_code=400, detail="Name is required")
-
-    if profile.monthly_income is not None and profile.monthly_income < 0:
-        raise HTTPException(status_code=400, detail="Monthly income cannot be negative")
-
-    current_user.name = profile.name.strip()
-    current_user.monthly_income = profile.monthly_income
-    current_user.financial_preference = profile.financial_preference
-    current_user.account_setting = profile.account_setting
-
-    db.commit()
-    db.refresh(current_user)
-
-    return {
-        "message": "Profile Updated Successfully",
-        "profile": {
-            "id": current_user.id,
-            "name": current_user.name,
-            "email": current_user.email,
-            "role": current_user.role,
-            "monthly_income": current_user.monthly_income,
-            "financial_preference": current_user.financial_preference,
-            "account_setting": current_user.account_setting,
-        },
     }
 
 
@@ -931,8 +884,6 @@ def delete_goal(
     db.commit()
 
     return {"message": "Goal Deleted"}
-from datetime import datetime
-
 @app.get("/analytics")
 def get_analytics(
     month: str | None = None,
@@ -1053,50 +1004,86 @@ def analytics_trends(
     return sorted(trends.values(), key=lambda x: x["month"])
 @app.get("/report/pdf")
 def generate_pdf(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    file_name = f"report_{current_user.id}.pdf"
+    if month:
+        try:
+            datetime.strptime(month, "%Y-%m")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid month format. Use YYYY-MM",
+            )
 
-    income = db.query(func.coalesce(func.sum(Income.amount),0)).filter(
-        Income.user_id==current_user.id).scalar()
+    income_query = db.query(Income).filter(Income.user_id == current_user.id)
+    expense_query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
-    expense = db.query(func.coalesce(func.sum(Expense.amount),0)).filter(
-        Expense.user_id==current_user.id).scalar()
-    budget = (
-    db.query(func.coalesce(func.sum(Budget.amount), 0))
-    .filter(Budget.user_id == current_user.id)
-    .scalar()
+    if month:
+        income_query = income_query.filter(
+            func.strftime("%Y-%m", Income.date) == month
+        )
+        expense_query = expense_query.filter(
+            func.strftime("%Y-%m", Expense.date) == month
+        )
+
+    income = income_query.with_entities(
+        func.coalesce(func.sum(Income.amount), 0)
+    ).scalar()
+    expense = expense_query.with_entities(
+        func.coalesce(func.sum(Expense.amount), 0)
+    ).scalar()
+
+    expenses = expense_query.order_by(Expense.date.desc()).all()
+    goals = db.query(SavingsGoal).filter(
+        SavingsGoal.user_id == current_user.id
+    ).all()
+
+    report_title = (
+        f"BudgetBuddy Monthly Report - {month}"
+        if month
+        else "BudgetBuddy Financial Report"
     )
 
-    goals = db.query(SavingsGoal).filter(
-        SavingsGoal.user_id==current_user.id).all()
-
+    file_name = f"report_{current_user.id}.pdf"
     pdf = SimpleDocTemplate(file_name)
 
     data = [
-        ["BudgetBuddy Monthly Report",""],
-        ["User", current_user.name],
-        ["Total Income", f"₹{income}"],
-        ["Total Expense", f"₹{expense}"],
-        ["Balance", f"₹{budget - expense}"],
-        ["",""],
-        ["Goal","Saved / Target"]
+        [report_title, "", "", ""],
+        ["User", current_user.name, "", ""],
+        ["Total Income", f"₹{income}", "", ""],
+        ["Total Expense", f"₹{expense}", "", ""],
+        ["Balance", f"₹{income - expense}", "", ""],
+        ["", "", "", ""],
+        ["Expense History", "", "", ""],
+        ["Title", "Category", "Amount", "Date"],
     ]
+
+    for e in expenses:
+        data.append([e.title, e.category, f"₹{e.amount}", str(e.date)])
+
+    data.extend([
+        ["", "", "", ""],
+        ["Savings Goals", "", "", ""],
+        ["Goal", "Saved", "Target", "Status"],
+    ])
 
     for g in goals:
         data.append([
             g.goal_name,
-            f"₹{g.current_saved} / ₹{g.target_amount}"
+            f"₹{g.current_saved}",
+            f"₹{g.target_amount}",
+            "Completed" if g.is_completed else "In Progress",
         ])
 
     table = Table(data)
     table.setStyle(TableStyle([
-        ("GRID",(0,0),(-1,-1),1,colors.grey),
-        ("BACKGROUND",(0,0),(-1,0),colors.purple),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-        ("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
-        ("BOTTOMPADDING",(0,0),(-1,0),12),
+        ("GRID", (0, 0), (-1, -1), 1, colors.grey),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.purple),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
     ]))
 
     pdf.build([table])
@@ -1104,50 +1091,78 @@ def generate_pdf(
     return FileResponse(
         file_name,
         filename="BudgetBuddy_Report.pdf",
-        media_type="application/pdf"
+        media_type="application/pdf",
     )
+
+
 @app.get("/report/excel")
 def generate_excel(
+    month: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if month:
+        try:
+            datetime.strptime(month, "%Y-%m")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid month format. Use YYYY-MM",
+            )
+
+    income_query = db.query(Income).filter(Income.user_id == current_user.id)
+    expense_query = db.query(Expense).filter(Expense.user_id == current_user.id)
+
+    if month:
+        income_query = income_query.filter(
+            func.strftime("%Y-%m", Income.date) == month
+        )
+        expense_query = expense_query.filter(
+            func.strftime("%Y-%m", Expense.date) == month
+        )
+
+    income = income_query.with_entities(
+        func.coalesce(func.sum(Income.amount), 0)
+    ).scalar()
+    expense = expense_query.with_entities(
+        func.coalesce(func.sum(Expense.amount), 0)
+    ).scalar()
+    expenses = expense_query.order_by(Expense.date.desc()).all()
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Budget Report"
 
-    ws.append(["BudgetBuddy Report"])
+    ws.append([
+        f"BudgetBuddy Monthly Report - {month}"
+        if month
+        else "BudgetBuddy Financial Report"
+    ])
     ws.append([])
-
-    income = db.query(func.coalesce(func.sum(Income.amount),0)).filter(
-        Income.user_id==current_user.id).scalar()
-
-    expense = db.query(func.coalesce(func.sum(Expense.amount),0)).filter(
-        Expense.user_id==current_user.id).scalar()
-    budget = (
-    db.query(func.coalesce(func.sum(Budget.amount), 0))
-    .filter(Budget.user_id == current_user.id)
-    .scalar()
-    )
-
+    ws.append(["User", current_user.name])
     ws.append(["Total Income", income])
     ws.append(["Total Expense", expense])
-    ws.append(["Balance", budget - expense])
+    ws.append(["Balance", income - expense])
     ws.append([])
+    ws.append(["Expense History"])
+    ws.append(["Title", "Category", "Amount", "Date"])
 
-    ws.append(["Category","Amount"])
+    for e in expenses:
+        ws.append([e.title, e.category, e.amount, str(e.date)])
+
+    ws.append([])
+    ws.append(["Category Summary"])
+    ws.append(["Category", "Amount"])
 
     categories = (
-        db.query(
-            Expense.category,
-            func.sum(Expense.amount)
-        )
-        .filter(Expense.user_id==current_user.id)
+        expense_query
+        .with_entities(Expense.category, func.sum(Expense.amount))
         .group_by(Expense.category)
         .all()
     )
 
-    for c,a in categories:
-        ws.append([c,a])
+    for category, amount in categories:
+        ws.append([category, amount])
 
     file_name = f"report_{current_user.id}.xlsx"
     wb.save(file_name)
@@ -1157,6 +1172,85 @@ def generate_excel(
         filename="BudgetBuddy_Report.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+# =====================================================
+# Scheduled Notifications
+# =====================================================
+
+def generate_scheduled_notifications(
+    db: Session,
+    current_user: User,
+):
+    now = datetime.utcnow()
+
+    # Savings reminder: first reminder immediately, then once every 7 days.
+    goals = (
+        db.query(SavingsGoal)
+        .filter(
+            SavingsGoal.user_id == current_user.id,
+            SavingsGoal.is_completed == False,
+        )
+        .all()
+    )
+
+    for goal in goals:
+        last_reminder = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.type == "savings_reminder",
+                Notification.related_id == goal.id,
+            )
+            .order_by(Notification.created_at.desc())
+            .first()
+        )
+
+        if (
+            not last_reminder
+            or not last_reminder.created_at
+            or now - last_reminder.created_at >= timedelta(days=7)
+        ):
+            db.add(
+                Notification(
+                    user_id=current_user.id,
+                    type="savings_reminder",
+                    message=f"💰 Keep saving for your goal: {goal.goal_name}",
+                    related_id=goal.id,
+                )
+            )
+
+    # Monthly report notification during the first 7 days of a new month.
+    if now.day <= 7:
+        previous_month = (
+            (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+        )
+
+        existing = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.type == "monthly_report",
+                Notification.message.contains(previous_month),
+            )
+            .first()
+        )
+
+        if not existing:
+            db.add(
+                Notification(
+                    user_id=current_user.id,
+                    type="monthly_report",
+                    message=(
+                        f"📊 Your BudgetBuddy monthly report for "
+                        f"{previous_month} is ready."
+                    ),
+                )
+            )
+
+    db.commit()
+
+
 # =====================================================
 # Notifications
 # =====================================================
@@ -1166,6 +1260,8 @@ def get_notifications(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    generate_scheduled_notifications(db, current_user)
+
     return (
         db.query(Notification)
         .filter(Notification.user_id == current_user.id)
@@ -1212,3 +1308,13 @@ def mark_notification_read(
     db.refresh(notification)   # ← ye line add karo
 
     return notification
+
+@app.get("/admin-test")
+def admin_test(
+    current_user: User = Depends(require_role("admin")),
+):
+    return {
+        "message": "Admin access granted",
+        "user": current_user.email,
+        "role": current_user.role,
+    }
