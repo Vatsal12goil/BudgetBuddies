@@ -1597,7 +1597,7 @@ def migrate_local_database(
                 title=item["title"],
                 amount=item["amount"],
                 category=item["category"],
-                date=item["date"],
+                date=_parse_date(item["date"]),
                 user_id=user_id,
             ))
             inserted["expenses"] += 1
