@@ -1666,6 +1666,18 @@ def migrate_local_database(
         if item.get("type") == "savings_reminder" and related_id in goal_map:
             related_id = goal_map[related_id]
 
+        # Legacy SQLite notifications can contain hash-sized values that
+        # PostgreSQL INTEGER cannot store. Preserve the notification itself
+        # while dropping an invalid legacy related_id.
+        if related_id is not None:
+            try:
+                related_id = int(related_id)
+            except (TypeError, ValueError):
+                related_id = None
+            else:
+                if not (-2147483648 <= related_id <= 2147483647):
+                    related_id = None
+
         exists = (
             db.query(Notification)
             .filter(
